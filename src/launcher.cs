@@ -43,9 +43,10 @@ class RdpLauncher
 
   static void Main(string[] args)
   {
+    // if no RDP url is provided, just launch mstsc
     if (args.Length == 0)
     {
-      Console.WriteLine("No RDP URL provided.");
+      Process.Start("mstsc.exe");
       return;
     }
 
@@ -76,7 +77,9 @@ class RdpLauncher
     }
 
     // Create a temporary .rdp file
-    string tempRdpFile = Path.GetTempFileName() + ".rdp";
+    string tempFile = Path.GetTempFileName();
+    File.Delete(tempFile);
+    string tempRdpFile = tempFile + ".rdp";
     File.WriteAllText(tempRdpFile, rdpContent);
 
     // Launch the RDP session without a console window
@@ -88,5 +91,16 @@ class RdpLauncher
       WindowStyle = ProcessWindowStyle.Hidden // Prevents console pop-up
     };
     Process.Start(psi);
+
+    // delete the temporary file after a few seconds
+    System.Threading.Thread.Sleep(5000);
+    if (File.Exists(tempRdpFile))
+    {
+      File.Delete(tempRdpFile);
+    }
+    else
+    {
+      Console.WriteLine("Temporary RDP file not found for deletion.");
+    }
   }
 }
