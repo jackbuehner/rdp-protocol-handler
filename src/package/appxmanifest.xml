@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Package xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10" xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10" xmlns:uap10="http://schemas.microsoft.com/appx/manifest/uap/windows10/10" xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities">
-  <Identity Name="JackBuehner.RDPProtocolHandler" Version="2025.5.26.1929" Publisher="CN=JackLaptop2022" ProcessorArchitecture="neutral" />
+  <Identity Name="JackBuehner.RDPProtocolHandler" Version="2025.5.26.1931" Publisher="CN=JackLaptop2022" ProcessorArchitecture="neutral" />
   <Properties>
     <DisplayName>RDP Protocol Handler</DisplayName>
     <PublisherDisplayName>Jack Buehner</PublisherDisplayName>
@@ -11,7 +11,7 @@
     <Resource Language="en-us" />
   </Resources>
   <Dependencies>
-    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.17134.0" MaxVersionTested="10.0.26100.3775" />
+    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.17763.0" MaxVersionTested="10.0.26100.3775" />
   </Dependencies>
   <Capabilities>
     <rescap:Capability Name="runFullTrust" />
