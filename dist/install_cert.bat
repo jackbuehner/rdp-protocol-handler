@@ -20,5 +20,3 @@ if exist "%certPath%" (
 ) else (
     echo Certificate file not found at: %certPath%
 )
-
-pause

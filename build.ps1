@@ -1,5 +1,6 @@
 Param(
-    [switch]$Unpackaged = $false
+    [switch]$Unpackaged = $false,
+    [switch]$ForStore = $false
 )
 
 function Find-CertificateByEkuAndPublisher {
@@ -124,7 +125,12 @@ if (-not (Test-Path -Path $makecertPath)) {
 
 
 $packageDir = ".\src\package"
-$distDir = ".\dist"
+
+if ($ForStore) {
+    $distDir = ".\dist\msft-store"
+} else {
+    $distDir = ".\dist"
+}
 
 # read the manifest xml file
 $manifestPath = "$packageDir\appxmanifest.xml"
@@ -134,9 +140,27 @@ $xml = [xml](Get-Content $manifestPath)
 $version = (Get-Date).ToString("yyyy.M.d.Hm")
 $xml.Package.Identity.Version = $version
 
+# set the identity name in appxmanifest.xml
+if ($ForStore) {
+    $xml.Package.Identity.Name = "17225JackBuehner.RDPProtocolHandler"
+} else {
+    $xml.Package.Identity.Name = "JackBuehner.RDPProtocolHandler"
+}
+
 # Set the publisher in appxmanifest.xml
-$publisher = [System.Net.Dns]::GetHostName()
+if ($ForStore) {
+    $publisher = "21E4C6BE-57F6-4999-923A-E201D6663071"
+} else {
+    $publisher = [System.Net.Dns]::GetHostName()
+}
 $xml.Package.Identity.Publisher = "CN=$publisher"
+
+# set the publisher display name in appxmanifest.xml
+if ($ForStore) {
+    $xml.Package.Properties.PublisherDisplayName = "Jack Buehner"
+} else {
+    $xml.Package.Properties.PublisherDisplayName = "Jack Buehner"
+}
 
 # read the app display name from the manifest file
 $AppName = $xml.Package.Properties.DisplayName
@@ -183,48 +207,49 @@ else {
   & $makeappxPath pack /d "$packageDir" /p "$distDir\$AppName.msix" /Overwrite
   Write-Host ""
 
-  # find a certificate with the needed EKU
-  $requiredEkusForSigning = @(
-    "1.3.6.1.5.5.7.3.3",      # code signing
-    "1.3.6.1.4.1.311.10.3.13" # lifestime signing
-  )
-  function Get-Certificate {
-    $result = Find-CertificateByEkuAndPublisher -CertStoreLocation Cert:\CurrentUser -CertStoreName My -RequiredEkus $requiredEkusForSigning -RequiredPublisher "CN=$publisher"
-    if ($result) {
-      return $result | Select-Object -First 1
-    }
-    return $null
-  }
-  $signingCert = Get-Certificate
-
-  if ($null -eq $signingCert) {
-      Write-Host "No signing certificate found with the specified EKUs in Cert:\CurrentUser\My"
-      Write-Host "A new certificate will be created."
-
-      # Create a new self-signed certificate
-      Write-Output "Creating a new self-signed certificate..."
-      Write-Host $publisher
-      & $makecertPath /n "CN=$publisher" /r /h 0 /eku "1.3.6.1.5.5.7.3.3,1.3.6.1.4.1.311.10.3.13" /e "12/31/2099" /sk "MyKey" /sr CurrentUser /ss My
-      Write-Output "Self-signed certificate created."
+  # if not ForStore, sign the msix package
+  if (-not $ForStore) {
+      # find a certificate with the needed EKU
+      $requiredEkusForSigning = @(
+        "1.3.6.1.5.5.7.3.3",      # code signing
+        "1.3.6.1.4.1.311.10.3.13" # lifestime signing
+      )
+      function Get-Certificate {
+        $result = Find-CertificateByEkuAndPublisher -CertStoreLocation Cert:\CurrentUser -CertStoreName My -RequiredEkus $requiredEkusForSigning -RequiredPublisher "CN=$publisher"
+        if ($result) {
+          return $result | Select-Object -First 1
+        }
+        return $null
+      }
       $signingCert = Get-Certificate
-      Write-Host ""
-  }
 
-  # sign the msix package
-  Write-Output 'Signing msix package...'
-  & $signtoolPath sign /a /v /fd sha256 /s My /sha1 $signingCert.Thumbprint /v "$distDir\$AppName.msix"
-  Write-Output "Signed msix package: installer\$AppName.msix"
-  Write-Output ""
-
-  # export the certificate (.cer) to the installer folder
-  $certExportPath = "$distDir\$AppName.cer"
-  $certificateToExport = Get-ChildItem Cert:\CurrentUser\My, Cert:\LocalMachine\My | Where-Object {$_.Thumbprint -eq $signingCert.Thumbprint}
-  Export-Certificate -Cert $certificateToExport -FilePath $certExportPath -Type CER | Out-Null
-  Write-Output "Exported certificate to: $certExportPath"
-
-  # export a ps1 file that can be used to install the certificate
-  $installCertScriptPath = "$distDir\install_cert.bat"
-  $installCertScriptContent = @"
+      if ($null -eq $signingCert) {
+          Write-Host "No signing certificate found with the specified EKUs in Cert:\CurrentUser\My"
+          Write-Host "A new certificate will be created."
+    
+          # Create a new self-signed certificate
+          Write-Output "Creating a new self-signed certificate..."
+          Write-Host $publisher
+          & $makecertPath /n "CN=$publisher" /r /h 0 /eku "1.3.6.1.5.5.7.3.3,1.3.6.1.4.1.311.10.3.13" /e "12/31/2099" /sk "MyKey" /sr CurrentUser /ss My
+          Write-Output "Self-signed certificate created."
+          $signingCert = Get-Certificate
+          Write-Host ""
+        }
+        
+        # sign the msix package
+        Write-Output 'Signing msix package...'
+        & $signtoolPath sign /a /v /fd sha256 /s My /sha1 $signingCert.Thumbprint /v "$distDir\$AppName.msix"
+        Write-Output "Signed msix package: installer\$AppName.msix"
+        Write-Output ""
+    
+        # export the certificate (.cer) to the installer folder
+        $certExportPath = "$distDir\$AppName.cer"
+        $certificateToExport = Get-ChildItem Cert:\CurrentUser\My, Cert:\LocalMachine\My | Where-Object {$_.Thumbprint -eq $signingCert.Thumbprint}
+        Export-Certificate -Cert $certificateToExport -FilePath $certExportPath -Type CER | Out-Null
+        Write-Output "Exported certificate to: $certExportPath"
+        # export a ps1 file that can be used to install the certificate
+        $installCertScriptPath = "$distDir\install_cert.bat"
+        $installCertScriptContent = @"
 @echo off
 
 rem Relaunch the script with elevated privileges if not already running as admin
@@ -248,7 +273,8 @@ if exist "%certPath%" (
     echo Certificate file not found at: %certPath%
 )
 "@
-  Set-Content -Path $installCertScriptPath -Value $installCertScriptContent -Force
+    Set-Content -Path $installCertScriptPath -Value $installCertScriptContent -Force
+  }
 }
 
 Write-Output 'DONE'
