@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Web;
+using System.Windows.Forms;
 
 class RdpLauncher
 {
@@ -43,10 +44,20 @@ class RdpLauncher
 
   static void Main(string[] args)
   {
-    // if no RDP url is provided, just launch mstsc
+    Application.EnableVisualStyles();
+
+
+    // if no arguments are provided, show an error dialog
     if (args.Length == 0)
     {
-      Process.Start("mstsc.exe");
+      MessageBox.Show("No RDP URL provided. Please use 'rdp://<parameters>'.", "Remote Desktop Protocol Handler", MessageBoxButtons.OK, MessageBoxIcon.Error);
+      return;
+    }
+
+    // if no RDP URL is provided or it does not start with "rdp://", show an error message
+    if (!args[0].StartsWith("rdp://"))
+    {
+      MessageBox.Show("Invalid RDP URL format. Please use 'rdp://<parameters>'.", "Remote Desktop Protocol Handler", MessageBoxButtons.OK, MessageBoxIcon.Error);
       return;
     }
 
@@ -100,7 +111,7 @@ class RdpLauncher
     }
     else
     {
-      Console.WriteLine("Temporary RDP file not found for deletion.");
+      MessageBox.Show("Temporary RDP file not found for deletion.", "Remote Desktop Protocol Handler", MessageBoxButtons.OK, MessageBoxIcon.Warning);
     }
   }
 }
