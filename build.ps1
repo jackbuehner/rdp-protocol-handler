@@ -136,8 +136,13 @@ if ($ForStore) {
 $manifestPath = "$packageDir\appxmanifest.xml"
 $xml = [xml](Get-Content $manifestPath)
 
-# set the version in appxmanifest.xml based on the current date and time
-$version = (Get-Date).ToString("yyyy.M.d.Hm")
+if ($ForStore) {
+    # set the version to 0, which is required for the Microsoft Store
+    $version = "0.0.0.0"
+} else {
+    # set the version in appxmanifest.xml based on the current date and time
+    $version = (Get-Date).ToString("yyyy.M.d.Hm")
+}
 $xml.Package.Identity.Version = $version
 
 # set the identity name in appxmanifest.xml
