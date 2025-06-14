@@ -65,7 +65,7 @@ class RdpLauncher
       return;
     }
 
-    string query = args[0].Replace("rdp://", "");
+    string query = args[0].Replace("rdp://", "").TrimEnd('/');
     var queryParams = HttpUtility.ParseQueryString(query);
 
     // Initialize an empty RDP config dictionary
