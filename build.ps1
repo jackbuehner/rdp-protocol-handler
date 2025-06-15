@@ -1,6 +1,8 @@
 Param(
     [switch]$Unpackaged = $false,
-    [switch]$ForStore = $false
+    [switch]$ForStore = $false,
+    [string]$ForceVersion = $null, # Optional parameter to force a specific version
+    [string]$ForcePublisher = $null # Optional parameter to force a specific publisher
 )
 
 function Find-CertificateByEkuAndPublisher {
@@ -136,7 +138,11 @@ if ($ForStore) {
 $manifestPath = "$packageDir\appxmanifest.xml"
 $xml = [xml](Get-Content $manifestPath)
 
-$version = (Get-Date).ToString("yyyy.Mdd.Hmm.0") # Microsft Store requires the last part to be 0
+$version = $ForceVersion
+if (-not $version) {
+    # if no version is provided, use the current date and time
+    $version = (Get-Date).ToString("yyyy.Mdd.Hmm.0") # Microsft Store requires the last part to be 0
+}
 $xml.Package.Identity.Version = $version
 
 # set the identity name in appxmanifest.xml
@@ -147,7 +153,9 @@ if ($ForStore) {
 }
 
 # Set the publisher in appxmanifest.xml
-if ($ForStore) {
+if ($ForcePublisher) {
+    $publisher = $ForcePublisher
+} elseif ($ForStore) {
     $publisher = "21E4C6BE-57F6-4999-923A-E201D6663071"
 } else {
     $publisher = [System.Net.Dns]::GetHostName()

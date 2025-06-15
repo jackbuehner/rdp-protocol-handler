@@ -1,0 +1,171 @@
+name: build
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "src/**"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "src/**"
+
+permissions:
+  contents: write
+
+jobs:
+  build-exe:
+    runs-on: windows-2022
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Generate release version
+        id: version
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: pwsh
+        run: |
+          $today = (Get-Date -Format 'yyyy.M.d')
+          $defaultVersion = "${today}.0"
+
+          # fetch the latest release tag name
+          try {
+              $latestVersion = gh release list --limit 1 --json tagName | ConvertFrom-Json | Select-Object -ExpandProperty tagName
+          } catch {
+              $latestVersion = ""
+          }
+
+          # check if we successfully got a latest version and if its date matches today's date
+          if (-not [string]::IsNullOrEmpty($latestVersion) -and ($latestVersion -match '^v([0-9]{4}\.[0-9]{2}\.[0-9]{2})\.([0-9]+)$')) {
+              $latestDate = $Matches[1]
+              $latestIncrement = [int]$Matches[2]
+
+              if ($latestDate -eq $today) {
+                  # date matches; increment the number
+                  $newIncrement = $latestIncrement + 1
+                  $newVersion = "${today}.${newIncrement}"
+              } else {
+                  # date does not match; use the default version with .0
+                  $newVersion = $defaultVersion
+              }
+          } else {
+              # No latest release found or format is unexpected, use the default version with .0
+              $newVersion = $defaultVersion
+          }
+
+          Write-Host "Using version $newVersion"
+          echo "version=$newVersion" >> $env:GITHUB_OUTPUT
+
+      - name: Install signing certificate
+        id: cert
+        env:
+          CERTIFICATE_BASE64: ${{ secrets.CERTIFICATE_BASE64 }}
+          CERTIFICATE_PASSWORD: ${{ secrets.CERTIFICATE_PASSWORD }}
+        shell: pwsh
+        run: |
+          $b64Path = "$env:TEMP\certificate.base64.txt"
+          $certPath = "$env:TEMP\certificate.pfx"
+          Remove-Item -Path $b64Path, $certPath -ErrorAction Ignore
+
+          Set-Content -Path $b64Path -Value $env:CERTIFICATE_BASE64 -Encoding ASCII
+
+          & certutil -decode $b64Path $certPath
+
+          $certPassword = ConvertTo-SecureString -String ${{ secrets.CERTIFICATE_PASSWORD }} -AsPlainText -Force
+          Import-PfxCertificate -FilePath $certPath -CertStoreLocation Cert:\CurrentUser\My -Password $certPassword
+
+          # import the certificate and capture the output object
+          $importedCert = Import-PfxCertificate -FilePath $certPath -CertStoreLocation Cert:\CurrentUser\My -Password $certPassword
+
+          # output the thumbprint
+          if ($null -ne $importedCert) {
+              # save thumbprint to github output
+              $thumbprint = $importedCert.Thumbprint
+              Write-Host "Certificate thumbprint: $thumbprint"
+              echo "thumbprint=$thumbprint" >> $env:GITHUB_OUTPUT
+
+          } else {
+              Write-Error "Failed to import certificate or retrieve the certificate object."
+          }
+
+          # clean up
+          Remove-Item -Path $b64Path, $certPath -Force
+
+      - name: Build app
+        shell: pwsh
+        run: |
+          Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
+          .\build.ps1 -ForceVersion ${{ steps.version.outputs.version }} -ForcePublisher "Jack Buehner"
+
+      - name: Build for Microsoft Store
+        shell: pwsh
+        run: |
+          Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
+          .\build.ps1 -ForStore
+
+      - name: Save store build output
+        uses: actions/upload-artifact@v4
+        with:
+          name: "msft-store-build"
+          path: |
+            dist/msft-store/
+
+      - name: Add version number to file name
+        shell: pwsh
+        run: |
+          $version = "${{ steps.version.outputs.version }}"
+
+          # make all names lowercase and use underscores instead of spaces
+          $files = Get-ChildItem -Path "dist" -File
+          foreach ($file in $files) {
+              $baseName = [System.IO.Path]::GetFileNameWithoutExtension($file.Name)
+              $extension = [System.IO.Path]::GetExtension($file.Name)
+              $newName = "$($baseName.ToLower())$extension"
+              $newName = $newName -replace ' ', '_'
+              Rename-Item -Path $file.FullName -NewName $newName
+          }
+
+          # add version number to the msix file name
+          $file = Get-ChildItem -Path "dist" -Filter "rdp_protocol_handler.msix" -File
+          $baseName = [System.IO.Path]::GetFileNameWithoutExtension($file.Name)
+          $extension = [System.IO.Path]::GetExtension($file.Name)
+          $newName = "${baseName}_v${version}$extension"
+          Rename-Item -Path $file.FullName -NewName $newName
+
+          # echo all the file names
+          $files = Get-ChildItem -Path "dist" -File
+          foreach ($file in $files) {
+              Write-Host "File: $($file.Name)"
+          }
+
+      - name: Create draft release
+        uses: ncipollo/release-action@v1
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/main')
+        with:
+          artifacts: "dist/rdp_protocol_handler_v${{ steps.version.outputs.version }}.msix,dist/rdp_protocol_handler.cer,dist/install_cert.bat" # comma-delimited list of artifact names
+          tag: "v${{ steps.version.outputs.version }}"
+          name: "Release v${{ steps.version.outputs.version }}"
+          draft: true
+          generateReleaseNotes: true
+          skipIfReleaseExists: true
+          body: |
+            ## Get the latest published release
+
+            <a href="https://apps.microsoft.com/detail/9n1192wschv9" target="_blank">
+              <picture>
+                <source media="(prefers-color-scheme: dark)" srcset="https://get.microsoft.com/images/en-us%20light.svg">
+                <source media="(prefers-color-scheme: light)" srcset="https://get.microsoft.com/images/en-us%20dark.svg">
+                <img src="frontend/lib/assets/favorites_light.png" alt="A screenshot of the favorites page in RAWeb">
+              </picture>
+            </a>
+
+            ## Install this release
+
+            1. **Install the certificate**
+              Download `rdp_protocol_handler.ce` and `install_cert.bat`. Run `install_cert.bat`.
+
+            2. **Install the app**
+              Download `rdp_protocol_handler_v${{ steps.version.outputs.version }}.msix` and open it. Click **Install** to install the app.

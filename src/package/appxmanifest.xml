@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Package xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10" xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10" xmlns:uap10="http://schemas.microsoft.com/appx/manifest/uap/windows10/10" xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities">
-  <Identity Name="17225JackBuehner.RDPProtocolHandler" Version="2025.605.1220.0" Publisher="CN=21E4C6BE-57F6-4999-923A-E201D6663071" ProcessorArchitecture="neutral" />
+  <Identity Name="JackBuehner.RDPProtocolHandler" Version="1.0.0.0" Publisher="CN=JackDesktop2024" ProcessorArchitecture="neutral" />
   <Properties>
     <DisplayName>RDP Protocol Handler</DisplayName>
     <PublisherDisplayName>Jack Buehner</PublisherDisplayName>

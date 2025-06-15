@@ -1,3 +1,11 @@
 src/package/priconfig.xml
+src/package/rdp_launcher.exe
 src/package/resources.pri
 dist/msft-store
+dist/
+.artifacts
+cert.base64.txt
+cert.cer
+cert.pfx
+cert.pvk
+runner.secrets
