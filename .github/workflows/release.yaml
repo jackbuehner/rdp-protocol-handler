@@ -33,13 +33,13 @@ jobs:
 
           # fetch the latest release tag name
           try {
-              $latestVersion = gh release list --limit 1 --json tagName | ConvertFrom-Json | Select-Object -ExpandProperty tagName
+              $latestVersion = (gh release list --limit 1 --json tagName | ConvertFrom-Json)[0].tagName
           } catch {
               $latestVersion = ""
           }
 
           # check if we successfully got a latest version and if its date matches today's date
-          if (-not [string]::IsNullOrEmpty($latestVersion) -and ($latestVersion -match '^v([0-9]{4}\.[0-9]{2}\.[0-9]{2})\.([0-9]+)$')) {
+          if (-not [string]::IsNullOrEmpty($latestVersion) -and ($latestVersion -match '^v([0-9]{4}\.[0-9]{1,2}\.[0-9]{1,2})\.([0-9]+)$')) {
               $latestDate = $Matches[1]
               $latestIncrement = [int]$Matches[2]
 
