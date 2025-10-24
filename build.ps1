@@ -276,13 +276,19 @@ set certPath=%~dp0%certName%
 if exist "%certPath%" (
     certutil -addstore "root" "%certPath%"
     if %errorlevel% equ 0 (
+	echo.
         echo Certificate installed successfully.
+	timeout /t 3 >nul
+	exit /b
     ) else (
         echo Failed to install certificate. Error code: %errorlevel%
     )
 ) else (
     echo Certificate file not found at: %certPath%
 )
+
+pause
+exit /b
 "@
     Set-Content -Path $installCertScriptPath -Value $installCertScriptContent -Force
   }
