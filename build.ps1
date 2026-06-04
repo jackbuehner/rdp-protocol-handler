@@ -171,6 +171,7 @@ if ($ForStore) {
 
 # read the app display name from the manifest file
 $AppName = $xml.Package.Properties.DisplayName
+$AppFileName = $AppName.ToLower() -replace ' ', '_'
 
 # save the updated manifest file
 $xml.Save($manifestPath)
@@ -243,19 +244,19 @@ if ($Unpackaged) {
 else {
   # create the msix package
   Write-Output 'Creating msix package...'
-  & $makeappxPath pack /d "$packageDir" /p "$distDir\$AppName.msix" /Overwrite
+  & $makeappxPath pack /d "$packageDir" /p "$distDir\${AppFileName}_v${version}.msix" /Overwrite
   Write-Host ""
 
   # if not ForStore, sign the msix package
   if (-not $ForStore) {        
         # sign the msix package
         Write-Output 'Signing msix package...'
-        & $signtoolPath sign /a /v /fd sha256 /s My /sha1 $signingCert.Thumbprint /v "$distDir\$AppName.msix"
-        Write-Output "Signed msix package: installer\$AppName.msix"
+        & $signtoolPath sign /a /v /fd sha256 /s My /sha1 $signingCert.Thumbprint /v "$distDir\${AppFileName}_v${version}.msix"
+        Write-Output "Signed msix package: $distDir\${AppFileName}_v${version}.msix"
         Write-Output ""
     
         # export the certificate (.cer) to the installer folder
-        $certExportPath = "$distDir\$AppName.cer"
+        $certExportPath = "$distDir\$AppFileName.cer"
         $certificateToExport = Get-ChildItem Cert:\CurrentUser\My, Cert:\LocalMachine\My | Where-Object {$_.Thumbprint -eq $signingCert.Thumbprint}
         Export-Certificate -Cert $certificateToExport -FilePath $certExportPath -Type CER | Out-Null
         Write-Output "Exported certificate to: $certExportPath"
@@ -271,7 +272,7 @@ if not "%1"=="elevated" (
     exit /b
 )
 
-set certName=$AppName.cer
+set certName=$AppFileName.cer
 set certPath=%~dp0%certName%
 
 if exist "%certPath%" (

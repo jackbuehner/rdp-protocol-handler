@@ -113,34 +113,6 @@ jobs:
           path: |
             dist/msft-store/
 
-      - name: Add version number to file name
-        shell: pwsh
-        run: |
-          $version = "${{ steps.version.outputs.version }}"
-
-          # make all names lowercase and use underscores instead of spaces
-          $files = Get-ChildItem -Path "dist" -File
-          foreach ($file in $files) {
-              $baseName = [System.IO.Path]::GetFileNameWithoutExtension($file.Name)
-              $extension = [System.IO.Path]::GetExtension($file.Name)
-              $newName = "$($baseName.ToLower())$extension"
-              $newName = $newName -replace ' ', '_'
-              Rename-Item -Path $file.FullName -NewName $newName
-          }
-
-          # add version number to the msix file name
-          $file = Get-ChildItem -Path "dist" -Filter "rdp_protocol_handler.msix" -File
-          $baseName = [System.IO.Path]::GetFileNameWithoutExtension($file.Name)
-          $extension = [System.IO.Path]::GetExtension($file.Name)
-          $newName = "${baseName}_v${version}$extension"
-          Rename-Item -Path $file.FullName -NewName $newName
-
-          # echo all the file names
-          $files = Get-ChildItem -Path "dist" -File
-          foreach ($file in $files) {
-              Write-Host "File: $($file.Name)"
-          }
-
       - name: Create draft release
         uses: ncipollo/release-action@v1
         if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/main')

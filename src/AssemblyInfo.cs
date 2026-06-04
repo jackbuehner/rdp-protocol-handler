@@ -5,5 +5,5 @@ using System.Reflection;
 [assembly: AssemblyVersion("1.0.0.0")]
 [assembly: AssemblyFileVersion("1.0.0.0")]
 [assembly: AssemblyCompany("Jack Buehner")]
-[assembly: AssemblyCopyright("Jack Buehner 2025")]
+[assembly: AssemblyCopyright("Jack Buehner 2026")]
 [assembly: AssemblyDescription("A protocol handler for rdp://")]
