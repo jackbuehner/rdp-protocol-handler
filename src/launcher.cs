@@ -146,6 +146,22 @@ class RdpLauncher
       }
     }
 
+    // If smartsizing is not already specified, set it to 1 by default.
+    // This allows the client to automatically reconnect with a new resolution
+    // whenever the window is resized.
+    if (!rdpConfig.ContainsKey("smart sizing"))
+    {
+      rdpConfig["smart sizing"] = "i:1";
+    }
+
+    // If dynamic resolution is not already specified, set it to 1 by default.
+    // This allows msrdc.exe to automatically reconnect with a new resolution
+    // whenever the window is resized.
+    if (!rdpConfig.ContainsKey("dynamic resolution"))
+    {
+      rdpConfig["dynamic resolution"] = "i:1";
+    }
+
     // Generate RDP content only with provided parameters
     string rdpContent = "";
     foreach (var entry in rdpConfig)
@@ -159,13 +175,49 @@ class RdpLauncher
     string tempRdpFile = tempFile + ".rdp";
     File.WriteAllText(tempRdpFile, rdpContent);
 
-    // Launch the RDP session without a console window
+    // Use mstsc.exe as the default RDP client. We will try to use msrcd.exe when it is available.
+    string rdpClient = "mstsc.exe";
+
+    // Use msrdc.exe if available in PATH. It supports modern features such as dynamic window resizing.
+    // It is available as a command alias when Remote Desktop app is installed from the Microsoft Store.
+    try
+    {
+      ProcessStartInfo whichMsrdc = new ProcessStartInfo
+      {
+        FileName = "where.exe",
+        Arguments = "msrdc.exe",
+        UseShellExecute = false,
+        RedirectStandardOutput = true,
+        CreateNoWindow = true
+      };
+      using (Process which = Process.Start(whichMsrdc))
+      {
+        which.WaitForExit();
+        if (which.ExitCode == 0)
+        {
+          rdpClient = "msrdc.exe";
+        }
+      }
+    }
+    catch { }
+
+    // If the normal msrdc.exe is not available, try the one bundled with WSL2.
+    // It supports modern features such as dynamic window resizing.
+    if (rdpClient != "msrdc.exe")
+    {
+      var wslPath = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles) + @"\WSL";
+      if (File.Exists(Path.Combine(wslPath, "msrdc.exe")))
+      {
+        rdpClient = Path.Combine(wslPath, "msrdc.exe");
+      }
+    }
+
+    // Launch the RDP session
     ProcessStartInfo psi = new ProcessStartInfo
     {
-      FileName = "mstsc.exe",
+      FileName = rdpClient,
       Arguments = tempRdpFile,
       UseShellExecute = true,
-      WindowStyle = ProcessWindowStyle.Hidden // Prevents console pop-up
     };
     Process.Start(psi);
 
