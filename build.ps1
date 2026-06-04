@@ -235,6 +235,7 @@ Write-Output "Created pri file: $priPath"
 # if the Unpackaged parameter is set to true, install the masix package as an unpackaged app
 if ($Unpackaged) {
     Write-Output 'Installing package as an unpackaged app...'
+    Import-Module Appx -UseWindowsPowerShell -WarningAction SilentlyContinue
     Add-AppxPackage -Register "$packageDir\appxmanifest.xml" -ForceUpdateFromAnyVersion
 }
 
