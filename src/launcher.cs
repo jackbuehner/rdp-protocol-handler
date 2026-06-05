@@ -112,7 +112,6 @@ class RdpLauncher
     Application.EnableVisualStyles();
     Application.SetCompatibleTextRenderingDefault(false);
 
-
     // if no arguments are provided, show an error dialog
     if (args.Length == 0)
     {
@@ -120,14 +119,101 @@ class RdpLauncher
       return;
     }
 
+    // if the argument is a path to an .rdp file, launch it directly without parsing as a URL
+    bool isRdpFile = args[0].Trim(' ').Trim('"').EndsWith(".rdp", StringComparison.OrdinalIgnoreCase);
+    if (isRdpFile)
+    {
+      try
+      {
+        HandleRdpFile(args[0]);
+      }
+      catch (Exception ex)
+      {
+        MessageBox.Show("Failed to launch RDP file:\n" + ex.Message, "Remote Desktop Protocol Handler", MessageBoxButtons.OK, MessageBoxIcon.Error);
+      }
+      return;
+    }
+
+    // if the argument is a path to a .resource file, extract the embedded .rdp file and launch it
+    bool isResourceFile = args[0].Trim(' ').Trim('"').EndsWith(".resource", StringComparison.OrdinalIgnoreCase) ||
+                          args[0].Trim(' ').Trim('"').EndsWith(".tsresource", StringComparison.OrdinalIgnoreCase);
+    if (isResourceFile)
+    {
+      try {
+        HandleResourceFile(args[0]);
+      }
+      catch (Exception ex)
+      {
+        MessageBox.Show("Failed to launch RDP resource file:\n" + ex.Message, "Remote Desktop Protocol Handler", MessageBoxButtons.OK, MessageBoxIcon.Error);
+      }
+      return;
+    }
+
     // if no RDP URL is provided or it does not start with "rdp://", show an error message
-    if (!args[0].StartsWith("rdp://"))
+    bool isRdpUrl = args[0].Trim().StartsWith("rdp://", StringComparison.OrdinalIgnoreCase);
+    if (!isRdpUrl)
     {
       MessageBox.Show("Invalid RDP URL format. Please use 'rdp://<parameters>'.", "Remote Desktop Protocol Handler", MessageBoxButtons.OK, MessageBoxIcon.Error);
       return;
     }
 
-    string query = args[0].Replace("rdp://", "").TrimEnd('/');
+    try
+    {
+      HandleRdpProtocol(args[0]);
+    }
+    catch (Exception ex)
+    {
+      MessageBox.Show("Failed to launch RDP session:\n" + ex.Message, "Remote Desktop Protocol Handler", MessageBoxButtons.OK, MessageBoxIcon.Error);
+    }
+  }
+
+  static string RdpClient
+  {
+    get
+    {
+      // Use msrdc.exe if available in PATH. It supports modern features such as dynamic window resizing.
+      // It is available as a command alias when Remote Desktop app is installed from the Microsoft Store.
+      try
+      {
+        ProcessStartInfo whichMsrdc = new ProcessStartInfo
+        {
+          FileName = "where.exe",
+          Arguments = "msrdc.exe",
+          UseShellExecute = false,
+          RedirectStandardOutput = true,
+          CreateNoWindow = true
+        };
+        using (Process which = Process.Start(whichMsrdc))
+        {
+          which.WaitForExit();
+          if (which.ExitCode == 0)
+          {
+            return "msrdc.exe";
+          }
+        }
+      }
+      catch { }
+
+      // If the normal msrdc.exe is not available, try the one bundled with WSL2.
+      // It supports modern features such as dynamic window resizing.
+      try
+      {
+        var wslPath = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles) + @"\WSL";
+        if (File.Exists(Path.Combine(wslPath, "msrdc.exe")))
+        {
+          return Path.Combine(wslPath, "msrdc.exe");
+        }
+      }
+      catch { }
+
+      // Fall back to mstsc.exe if msrdc.exe is not found
+      return "mstsc.exe";
+    }
+  }
+
+  static void HandleRdpProtocol(string rdpUrl)
+  {
+    string query = rdpUrl.Replace("rdp://", "").TrimEnd('/');
     var queryParams = HttpUtility.ParseQueryString(query);
 
     // Initialize an empty RDP config dictionary
@@ -175,47 +261,10 @@ class RdpLauncher
     string tempRdpFile = tempFile + ".rdp";
     File.WriteAllText(tempRdpFile, rdpContent);
 
-    // Use mstsc.exe as the default RDP client. We will try to use msrcd.exe when it is available.
-    string rdpClient = "mstsc.exe";
-
-    // Use msrdc.exe if available in PATH. It supports modern features such as dynamic window resizing.
-    // It is available as a command alias when Remote Desktop app is installed from the Microsoft Store.
-    try
-    {
-      ProcessStartInfo whichMsrdc = new ProcessStartInfo
-      {
-        FileName = "where.exe",
-        Arguments = "msrdc.exe",
-        UseShellExecute = false,
-        RedirectStandardOutput = true,
-        CreateNoWindow = true
-      };
-      using (Process which = Process.Start(whichMsrdc))
-      {
-        which.WaitForExit();
-        if (which.ExitCode == 0)
-        {
-          rdpClient = "msrdc.exe";
-        }
-      }
-    }
-    catch { }
-
-    // If the normal msrdc.exe is not available, try the one bundled with WSL2.
-    // It supports modern features such as dynamic window resizing.
-    if (rdpClient != "msrdc.exe")
-    {
-      var wslPath = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles) + @"\WSL";
-      if (File.Exists(Path.Combine(wslPath, "msrdc.exe")))
-      {
-        rdpClient = Path.Combine(wslPath, "msrdc.exe");
-      }
-    }
-
     // Launch the RDP session
     ProcessStartInfo psi = new ProcessStartInfo
     {
-      FileName = rdpClient,
+      FileName = RdpClient,
       Arguments = tempRdpFile,
       UseShellExecute = true,
     };
@@ -230,6 +279,56 @@ class RdpLauncher
     else
     {
       MessageBox.Show("Temporary RDP file not found for deletion.", "Remote Desktop Protocol Handler", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+    }
+  }
+
+  static void HandleRdpFile(string filePath)
+  {
+      if (!File.Exists(filePath))
+      {
+        MessageBox.Show("RDP file not found: " + filePath, "Remote Desktop Protocol Handler", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        return;
+      }
+  
+      ProcessStartInfo psi = new ProcessStartInfo
+      {
+        FileName = RdpClient,
+        Arguments = "\"" + filePath + "\"",
+        UseShellExecute = true,
+      };
+      Process.Start(psi);
+  }
+
+  static void HandleResourceFile(string filePath)
+  {
+    var tempDir = Path.Combine(Path.GetTempPath(), "RdpProtocolHandler", Guid.NewGuid().ToString());
+    Directory.CreateDirectory(tempDir);
+
+    try
+    {
+      // extract the .resource file (which is just a zip file) to the temporary directory
+      System.IO.Compression.ZipFile.ExtractToDirectory(filePath, tempDir);
+
+      // the resource is always named resource.rdp
+      var extractedRdpPath = Path.Combine(tempDir, "resource.rdp");
+      if (File.Exists(extractedRdpPath))
+      {
+        // launch the extracted .rdp file
+        HandleRdpFile(extractedRdpPath);
+      }
+      else
+      { 
+        MessageBox.Show("RDP file not found in resource: " + extractedRdpPath, "Remote Desktop Protocol Handler", MessageBoxButtons.OK, MessageBoxIcon.Error);
+      }
+    }
+    finally
+    {
+      // delete the temporary directory after a few seconds
+      System.Threading.Thread.Sleep(5000);
+      if (Directory.Exists(tempDir))
+      {
+        Directory.Delete(tempDir, true);
+      }
     }
   }
 }

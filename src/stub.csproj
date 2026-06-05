@@ -1,0 +1,14 @@
+<!-- stub project so that vscode does not complain about missing references -->
+<!-- DO NOT USE dotnet run, dotnet build, etc. -->
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>net462</TargetFramework>
+    <LangVersion>5.0</LangVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System.IO.Compression" />
+    <Reference Include="System.IO.Compression.FileSystem" />
+    <Reference Include="System.Web" />
+    <Reference Include="System.Windows.Forms" />
+  </ItemGroup>
+</Project>

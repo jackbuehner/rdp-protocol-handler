@@ -209,7 +209,7 @@ if ($null -eq $signingCert) {
 # compile the launcher code
 $cscopilerPath = "$env:SystemRoot\Microsoft.NET\Framework\v4.0.30319\csc.exe"
 Write-Host "Compiling launcher code..."
-& $cscopilerPath /target:winexe /out:$packageDir\rdp_launcher.exe .\src\*.cs
+& $cscopilerPath /target:winexe /reference:System.IO.Compression.dll /reference:System.IO.Compression.FileSystem.dll /out:$packageDir\rdp_launcher.exe .\src\*.cs
 Write-Host ""
 
 # sign the launcher executable

@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Package xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10" xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10" xmlns:uap10="http://schemas.microsoft.com/appx/manifest/uap/windows10/10" xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities">
-  <Identity Name="JackBuehner.RDPProtocolHandler" Version="2026.604.1610.0" Publisher="CN=JackDesktop2024" ProcessorArchitecture="neutral" />
+  <Identity Name="JackBuehner.RDPProtocolHandler" Version="2026.604.2203.0" Publisher="CN=JackDesktop2024" ProcessorArchitecture="neutral" />
   <Properties>
     <DisplayName>RDP Protocol Handler</DisplayName>
     <PublisherDisplayName>Jack Buehner</PublisherDisplayName>
@@ -18,10 +18,27 @@
   </Capabilities>
   <Applications>
     <Application Id="App" Executable="rdp_launcher.exe" EntryPoint="Windows.FullTrustApplication" uap10:RuntimeBehavior="packagedClassicApp" uap10:TrustLevel="mediumIL">
-      <uap:VisualElements DisplayName="Remote Desktop Protocol Handler" Description="A protocol handler for rdp://" Square150x150Logo="images/Logo44x44.png" Square44x44Logo="images/Logo44x44.png" BackgroundColor="transparent" />
+      <uap:VisualElements DisplayName="Remote Desktop Protocol Handler" Description="A protocol handler for rdp://" Square150x150Logo="images/Logo150x150.png" Square44x44Logo="images/Logo44x44.png" BackgroundColor="transparent" />
       <Extensions>
         <uap:Extension Category="windows.protocol">
           <uap:Protocol Name="rdp" />
+        </uap:Extension>
+        <uap:Extension Category="windows.fileTypeAssociation">
+          <uap:FileTypeAssociation Name="rdp">
+            <uap:Logo>images/Logo150x150.png</uap:Logo>
+            <uap:SupportedFileTypes>
+              <uap:FileType>.rdp</uap:FileType>
+            </uap:SupportedFileTypes>
+          </uap:FileTypeAssociation>
+        </uap:Extension>
+        <uap:Extension Category="windows.fileTypeAssociation">
+          <uap:FileTypeAssociation Name="tsresource">
+            <uap:Logo>images/Logo150x150.png</uap:Logo>
+            <uap:SupportedFileTypes>
+              <uap:FileType>.resource</uap:FileType>
+              <uap:FileType>.tsresource</uap:FileType>
+            </uap:SupportedFileTypes>
+          </uap:FileTypeAssociation>
         </uap:Extension>
       </Extensions>
     </Application>

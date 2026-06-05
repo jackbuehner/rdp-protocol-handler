@@ -1,5 +1,6 @@
 src/package/priconfig.xml
 src/package/rdp_launcher.exe
+src/package/ResourceThumbnailProvider.dll
 src/package/resources.pri
 dist/msft-store
 dist/
@@ -9,3 +10,5 @@ cert.cer
 cert.pfx
 cert.pvk
 runner.secrets
+obj/
+bin/
