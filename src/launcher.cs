@@ -173,38 +173,38 @@ class RdpLauncher
     {
       // Use msrdc.exe if available in PATH. It supports modern features such as dynamic window resizing.
       // It is available as a command alias when Remote Desktop app is installed from the Microsoft Store.
-      try
-      {
-        ProcessStartInfo whichMsrdc = new ProcessStartInfo
-        {
-          FileName = "where.exe",
-          Arguments = "msrdc.exe",
-          UseShellExecute = false,
-          RedirectStandardOutput = true,
-          CreateNoWindow = true
-        };
-        using (Process which = Process.Start(whichMsrdc))
-        {
-          which.WaitForExit();
-          if (which.ExitCode == 0)
-          {
-            return "msrdc.exe";
-          }
-        }
-      }
-      catch { }
+      // try
+      // {
+      //   ProcessStartInfo whichMsrdc = new ProcessStartInfo
+      //   {
+      //     FileName = "where.exe",
+      //     Arguments = "msrdc.exe",
+      //     UseShellExecute = false,
+      //     RedirectStandardOutput = true,
+      //     CreateNoWindow = true
+      //   };
+      //   using (Process which = Process.Start(whichMsrdc))
+      //   {
+      //     which.WaitForExit();
+      //     if (which.ExitCode == 0)
+      //     {
+      //       return "msrdc.exe";
+      //     }
+      //   }
+      // }
+      // catch { }
 
-      // If the normal msrdc.exe is not available, try the one bundled with WSL2.
-      // It supports modern features such as dynamic window resizing.
-      try
-      {
-        var wslPath = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles) + @"\WSL";
-        if (File.Exists(Path.Combine(wslPath, "msrdc.exe")))
-        {
-          return Path.Combine(wslPath, "msrdc.exe");
-        }
-      }
-      catch { }
+      // // If the normal msrdc.exe is not available, try the one bundled with WSL2.
+      // // It supports modern features such as dynamic window resizing.
+      // try
+      // {
+      //   var wslPath = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles) + @"\WSL";
+      //   if (File.Exists(Path.Combine(wslPath, "msrdc.exe")))
+      //   {
+      //     return Path.Combine(wslPath, "msrdc.exe");
+      //   }
+      // }
+      // catch { }
 
       // Fall back to mstsc.exe if msrdc.exe is not found
       return "mstsc.exe";

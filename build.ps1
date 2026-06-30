@@ -141,7 +141,8 @@ $xml = [xml](Get-Content $manifestPath)
 $version = $ForceVersion
 if (-not $version) {
     # if no version is provided, use the current date and time
-    $version = (Get-Date).ToString("yyyy.Mdd.Hmm.0") # Microsft Store requires the last part to be 0
+    $now = Get-Date
+    $version = "$($now.ToString('yyyy')).$($now.ToString('Mdd')).$($now.Hour + 1)$($now.ToString('mm')).0" # H+1 avoids a leading zero at midnight; last part must be 0 for Microsoft Store
 }
 $xml.Package.Identity.Version = $version
 
